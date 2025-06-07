@@ -156,3 +156,30 @@ fi
 
 echo "Git global config:"
 git config --global --list
+
+# Check if podman (client) is installed
+if command -v podman > /dev/null 2>&1; then
+    echo "Podman client is already installed: $(podman --version)"
+else
+    echo "Podman client not found. Installing podman remote..."
+    sudo apt-get update
+    sudo apt-get install -y podman
+
+    # Configure Podman access for WSL
+    echo "Configuring Podman access..."
+    sudo usermod --append --groups 10 $(whoami)
+    echo "Added user to podman access group (10/uucp)"
+
+    # Set PODMAN_HOST in bashrc
+    if ! grep -q "PODMAN_HOST=" ~/.bashrc; then
+        podman system connection add podman-desktop-root unix:///mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
+        podman system connection default podman-desktop-root
+        sed -i '/^\[engine\]/a remote = true' ~/.config/containers/containers.conf
+
+    else
+        echo "PODMAN_HOST already configured in ~/.bashrc"
+    fi
+
+    # Apply environment changes for current session
+    echo "Podman client installation completed: $(podman --version)"
+fi
